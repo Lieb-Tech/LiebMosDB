@@ -1,0 +1,263 @@
+﻿<script src="https://ajax.aspnetcdn.com/ajax/knockout/knockout-3.4.2.js"></script>
+<script>
+    var searchVM = function () {
+        let self = this;
+        // selected person
+        self.id = '';
+
+        /* Find path from Person A to person B */
+        // results
+        self.path = ko.observableArray([]);
+        // name of whom to find path to
+        self.toPath = ko.observable();
+        // call WebAPI to get path
+        self.findPath = function () {
+            self.loading(true);
+            var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
+            xmlhttp.open("GET", "/Path/" + self.id + "/" + self.toPath());
+            xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xmlhttp.addEventListener("load", function () {
+                self.loading(false);
+                self.path();
+                let pathInfo = JSON.parse(this.response).path; 
+                let list = [];
+                for (var p in pathInfo) {
+                    // make results clickable
+                    if (p == pathInfo.length - 1)
+                        list.push({ name: pathInfo[p], url: "/home/index#info=" + pathInfo[p], sep: '' });
+                    else
+                        list.push({ name: pathInfo[p], url: "/home/index#info=" + pathInfo[p], sep: ' -> ' });
+                }       
+                self.path(list);
+            });
+            xmlhttp.send();        
+        }
+
+        /* Name search */
+        // results
+        self.names = ko.observableArray();
+        // search name
+        self.name = ko.observable('');
+        // Call WebAPI
+        self.search = function () {
+            self.info(undefined);
+
+            var req = new XMLHttpRequest();
+            req.overrideMimeType("application/json");
+            req.responseType = 'json';
+            req.addEventListener("load", function () {
+                self.loading(false);
+                // save results
+                self.names(this.response.results);
+            });
+
+            self.loading(true);
+            req.open("GET", "/Search/" + self.name());
+            req.send();
+        }
+
+        /* Add a chil to the current person */
+        // name
+        self.newChild = ko.observable();
+        // Create Edge via API, with Mother label
+        self.addAsMother = function () {
+            self.addEdge('Mother', self.newChild());            
+            self.info().children.push({ url: "/home/index#info=" + self.newChild(), name: self.newChild() });
+            self.newChild(undefined);
+        }
+        // Create Edge via API, with Father label
+        self.addAsFather = function () {
+            self.addEdge('Father', self.newChild());
+            self.info().children.push({ url: "/home/index#info=" + self.newChild(), name: self.newChild() });
+            self.newChild(undefined);
+        }
+
+        // wrapper for API call
+        self.addEdge = function(label, to) {
+            self.loading(true);
+            var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
+            xmlhttp.open("POST", "/AddEdge/" + self.id);
+            xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xmlhttp.addEventListener("load", function () {
+                self.loading(false);
+            });
+            xmlhttp.send(JSON.stringify({ label: label, v: to }));
+        }
+
+
+        /* Add a property to the current Vertex */
+        // values to add
+        self.newKey = ko.observable();
+        self.newValue = ko.observable();
+        // basic validation
+        self.canAdd = ko.pureComputed(function () {
+            return self.id != '' && (self.newKey() != undefined && self.newKey().trim().length > 1) &&
+                (self.newValue() != undefined && self.newValue().trim().length > 1);
+        }, self);
+        // Call API to save
+        self.saveKeyValue = function () {
+            self.loading(true);
+            var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
+            xmlhttp.open("POST", "/AddProperty/" + self.id);
+            xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xmlhttp.addEventListener("load", function () {                 
+                self.loading(false);
+                self.newKey('');
+                self.newValue('');
+            });
+            xmlhttp.send(JSON.stringify({ key: self.newKey(), value: self.newValue() }));
+        }
+
+        /* Busy animation */
+        self.loading = function (show) {
+            var loading = document.getElementById("loadingData");
+            if (show)
+                loading.style.display = "initial";
+            else
+                loading.style.display = "none";
+        }
+
+        // current selected Vertex
+        self.info = ko.observable();
+        // get info from API
+        self.getInfo = function (v) {
+            self.id = v.id;
+            var req = new XMLHttpRequest();
+            req.overrideMimeType("application/json");
+            req.responseType = 'json';
+            req.addEventListener("load", function () {                
+                self.loading(false);
+                // clear out old values
+                self.info(undefined);
+                self.path(undefined);
+                self.newKey(undefined);
+                self.newValue(undefined);
+                self.newChild(undefined);
+
+                // parse results
+                var o = {};
+                o.married = this.response.marriedTo;
+                o.marriedURL = "/home/index#info=" + o.married;
+                // get children Edges, and make clickable
+                o.children = ko.observableArray(this.response.family.filter(function (v) { return v.type == "Child" }));
+                for (var idx in o.children()) {
+                    o.children()[idx].url = "/home/index#info=" + o.children()[idx].name;
+                }
+
+                // get Pop, and make clickable
+                o.father = this.response.family.filter(function (v) { return v.type == "Father" });
+                if (o.father.length == 1)
+                    o.father[0].url = "/home/index#info=" + o.father[0].name;
+
+                // get Mom, and make clickable
+                o.mother = this.response.family.filter(function (v) { return v.type == "Mother" });
+                if (o.mother.length == 1)
+                    o.mother[0].url = "/home/index#info=" + o.mother[0].name;
+
+                o.id = this.response.vert[0].id;
+
+                // Property list
+                o.properties = [];
+                for (var prop in this.response.vert[0].properties) {
+                    o.properties.push({ name: prop, val: this.response.vert[0].properties[prop][0].value });
+                }                
+
+                // other connections 
+                o.edgesMe = this.response.eMe.slice();
+                o.edgesOther = this.response.eOther.slice();
+
+                self.info(o);
+            });
+
+            // save for Forward/back navigation
+            window.location.hash = "info=" + v.id;
+            req.open("GET", "/info/" + v.id);
+            self.loading(true);
+            req.send();
+        };        
+    }
+
+    var v = new searchVM();
+
+    // when page loads, check if there's a Vertex to preload
+    function parseHash() {
+        var idx = window.location.hash.indexOf("=") + 1;
+        v.name(window.location.hash.substring(idx));
+        v.getInfo({ id: window.location.hash.substring(idx) });
+    }
+
+    // catch the forward/back browser navigation and process
+    window.onpopstate = function () {
+        if (window.location.hash != undefined && window.location.hash != "") {
+            parseHash();
+        }
+    }
+
+    // start off page (wanted to try skipping JQuery for this site, as I've become too dependant on it)
+    document.addEventListener('DOMContentLoaded', function () {
+        ko.applyBindings(v);
+        parseHash();
+    });
+
+</script>
+
+<div class="jumbotron" >
+    <h1>LiebMosDB</h1>
+    <p class="lead">LiebMosDB is a search based on CosmosDB with GraphAPI. Use it look up people, place or things in the Bible</p>    
+    In the database, so far, are only several people from Adam to Noah.<br /><br />
+    You can: search for people, add children (with different Edge labels) and find connection from person to person (ie: Adam to Noah) using repeat().<br /><br />
+    This is running on a free tier App Service, with .NET backend (tried Core, but had problems loading Graphs library) and 400/RU instance.<br />    
+</div>
+
+<div class="row">
+    <div id="loadingData" style="position:relative;top:0px;left:0px;width:100%;height:100%;z-index:10">
+        <div style="position:absolute;top:0px;left:0px;width:100%;height:100%;opacity:0.5;background-color:silver;"></div>
+        <img style="position:absolute;top:20px;left:40%;" src="https://static1.squarespace.com/static/54dcf1f3e4b03174c3dc75f5/t/5696221e05f8e204f27d6076/1452679715245/?format=150w" height="100" />
+    </div>
+    <div class="col-md-4">
+        Name: <input type="text" data-bind="textInput:name" /> <button data-bind="click:search">Search</button><br /><br />
+        Search Results
+        <div data-bind="foreach:names">
+            <div> <button data-bind="click:$root.getInfo,text:name"></button></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div data-bind="with:info">
+            <div data-bind="text:id"></div>
+            <div data-bind="foreach:properties">
+                <div>- <span data-bind="text:name"></span>: <span data-bind="text:val"></span></div>
+            </div>
+            <br /><br />
+            Path to <input type="text" data-bind="textInput:$root.toPath" /><button data-bind="click:$root.findPath">Find</button>
+            <div data-bind="foreach:$root.path">
+                <a data-bind="attr:{href:url}, text:name"></a> <span data-bind="text:sep"></span>
+            </div>
+            <br />
+            <div>
+                Add new info:<br />
+                Type: <input type="text" data-bind="textInput:$root.newKey" /><br>
+                Value: <input type="text" data-bind="textInput:$root.newValue" /><br>
+                <button data-bind="visible:$root.canAdd, click:$root.saveKeyValue ">Save</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div data-bind="with:info">
+            <div data-bind="if:father.length > 0">Father: <a data-bind="attr:{href:father[0].url}, text:father[0].name"></a></div>
+            <div data-bind="if:mother.length > 0">Mother: <a data-bind="attr:{href:mother[0].url}, text:mother[0].name"></a></div>
+            <div data-bind="if:married.length > 0">Married to: <a data-bind="attr:{href:marriedURL}, text:married"></a></div>
+            Children: <div data-bind="foreach:children">
+                <div>- <a data-bind="attr:{href:url}, text:name"></a></div>
+            </div>
+            <input type="text" data-bind="textInput:$root.newChild" style="width:100px" /> <button data-bind="click:$root.addAsMother" >Mother</button> &nbsp; <button data-bind="click:$root.addAsFather">Father</button><br />
+            <br />
+            <div>Other Connections:</div>
+            <div data-bind="foreach:edgesMe">
+                <div>- <span data-bind="text:outV"></span> <span data-bind="text:label"></span> to <span data-bind="text:inV"></span></div>
+            </div>
+            <div data-bind="foreach:edgesOther">
+                <div>- <span data-bind="text:outV"></span> <span data-bind="text:label"></span> to <span data-bind="text:inV"></span></div>
+            </div>
+        </div>
+    </div>
+</div>

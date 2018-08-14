@@ -1,0 +1,177 @@
+﻿
+<script defer src="~/Scripts/Views/Deux.js"></script>
+<!-- Modal -->
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="modalClose" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" id="modalAction" class="btn btn-primary" data-dismiss="modal">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="jumbotron" style="margin-bottom:0px !important;padding:10px !important;">
+    <h1>LiebMosDB</h1>
+    A social network of Biblical proportions
+    <div class="input-group">
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal">
+            New Person
+        </button>
+        <button type="button" class="btn btn-primary" id="searchButton" data-toggle="collapse" href="#searchRow" role="button" aria-expanded="false" aria-controls="searchRow">
+            Search
+        </button>
+    </div>
+</div>
+<div id="loadingData" style="position:relative;top:0px;left:0px;width:100%;height:100%;z-index:10">
+    <div style="position:absolute;top:0px;left:0px;width:100%;height:100%;opacity:0.5;background-color:silver;"></div>
+    <img style="position:absolute;top:20px;left:40%;" src="https://static1.squarespace.com/static/54dcf1f3e4b03174c3dc75f5/t/5696221e05f8e204f27d6076/1452679715245/?format=150w" height="100" />
+</div>
+
+
+<div id="searchRow" class="collapse">
+    <div class="row">
+        <div class="col-md-6">
+            Name: <input style="width:100px" type="text" data-bind="textInput:searchName" />
+            Parent: <input style="width:100px" type="text" data-bind="textInput:searchParent" />
+            <button data-bind="click:idByName">Search</button><br /><br />
+        </div>
+        <div class="col-md-6">
+            Search Results
+            <div data-bind="foreach:searchResults">
+                <div> <a href="#" data-bind="click:$root.selectSearchResult, text:name"></a> <span data-bind="text:info"></span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" data-bind="with:person">
+    <div class="col-md-12" style="text-align:center;background:silver;">
+        <h3><span data-bind="text:name"></span></h3>
+    </div>
+</div>
+<div class="row" data-bind="with:person">
+    <div class="col-md-4">
+        <br />
+        Spouse:
+        <button class="btn btn-sm btn-light" data-toggle="collapse" href="#collapseSpouse" role="button" aria-expanded="false" aria-controls="collapseSpouse">
+            <i class="fas fa-plus-square"></i>
+        </button>
+        <div class="collapse" id="collapseSpouse" style="width:300px;">
+            <div class="card card-body" style="background-color:lightgray">
+                <div data-bind="with:newSpouse">
+                    <div style="font-weight:bold;">New Spouse for <span data-bind="text:$root.person().name"></span></div>
+                    Name: <input type="text" style="width:100px;" data-bind="textInput:spName" />
+                    <select data-bind="value:spGender"><option value="F">Wife</option><option value="M">Husband</option></select>
+                    <br /><button style="width:75px;" class="btn btn-sm btn-primary"><i class="fas fa-save "></i> Save</button>
+                </div>
+            </div>
+        </div>
+        <ul data-bind="foreach:spouse">
+            <li>
+                <a data-bind="text:name, attr:{href:url}"></a>
+                <div style="display:inline-block"> ( <span data-bind="text:type"></span> )</div>
+            </li>
+        </ul>
+        Parents:
+        <ul data-bind="foreach:parents">
+            <li>
+                <a data-bind="text:name, attr:{href:url}"></a>
+                <div style="display:inline-block" data-bind="visible:type != null">( <span data-bind="text:type"></span> )</div>
+            </li>
+        </ul>
+        Children:
+        <button class="btn btn-sm btn-light" data-toggle="collapse" href="#collapseChild" role="button" aria-expanded="false" aria-controls="collapseChild">
+            <i class="fas fa-plus-square"></i>
+        </button>
+        <div class="collapse" id="collapseChild" style="width:300px;">
+            <div class="card card-body" style="background-color:lightgray">
+                <div data-bind="with:newChild">
+                    <div style="font-weight:bold;">New Child for <span data-bind="text:$root.person().name"></span></div>
+                    Name: <input type="text" data-bind="textInput:ncName" style="width:100px;" />
+                    <select data-bind="value:ncGender"><option value="F">Daughter</option><option value="M">Son</option></select><br />
+                    Mother: <select data-bind="options:ncMotherList, value:ncMother, optionsText: 'name'" style="width:100px;" />
+                    Age: <input type="text" data-bind="textInput:ncMotherAge" style="width:50px;" /><br />
+                    Father: <select data-bind="options:ncFatherList, value:ncFather, optionsText: 'name'" style="width:100px;" />
+                    Age: <input type="text" data-bind="textInput:ncFatherAge" style="width:50px;" /><br />
+                    <button data-bind="click:ncSave" style="width:75px;margin-top:5px;" class="btn btn-sm btn-primary">
+                        <i class="fas fa-save "></i> Save
+                    </button>
+                </div>
+            </div>
+        </div>
+        <ul data-bind="foreach:children">
+            <li>
+                <a data-bind="text:name, attr:{href:url}"></a>
+                <div style="display:inline-block" data-bind="visible:type != null">( <span data-bind="text:type"></span> )</div>
+                <ul style="display:inline-block" data-bind="visible:properties.length > 0, foreach:properties">
+                    <li><span data-bind="text:key"></span> : <span data-bind="text:value"></span></li>
+                </ul>
+            </li>
+        </ul>
+        Siblings:
+        <ul data-bind="foreach:siblings">
+            <li>
+                <a data-bind="text:name, attr:{href:url}"></a>
+                <div style="display:inline-block" data-bind="visible:type != null">( <span data-bind="text:type"></span> )</div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="col-md-5">
+        <br />
+        <h4>Info</h4>
+        Add new:
+        <div data-bind="with:newProp">
+            <div>
+                <select data-bind="options: pOptions,
+                    value: pKey,
+                optionsCaption: 'Choose...'"></select>
+                <div data-bind="visible:pKey() == 'other'">Other: <input data-bind="textInput: pKeyCustom" style="width:150px" /></div>
+                Value: <input data-bind="textInput: pValue" style="width:150px" />
+                <button data-bind="click:pSave" style="width:75px;margin-top:5px;" class="btn btn-sm btn-primary"><i class="fas fa-save "></i> Save</button>
+            </div>
+        </div>
+        <br />
+        <ul data-bind="foreach:properties">
+            <li><div style="display:inline-block" data-bind="text:key"></div> -  <div style="display:inline-block" data-bind="text:value"></div></li>
+        </ul>
+    </div>
+    <div class="col-md-3">
+        <br />
+        Lived:
+        <button class="btn btn-sm btn-light" data-toggle="collapse" href="#collapseLived" role="button" aria-expanded="false" aria-controls="collapseLived">
+            <i class="fas fa-plus-square"></i>
+        </button>
+        <div class="collapse" id="collapseLived">
+            <div class="card card-body" style="background-color:lightgray">
+                <div data-bind="with:newArea">
+                    <div style="font-weight:bold;">New area lived for <span data-bind="text:$root.person().name"></span></div>
+                    Area: <input type="text" data-bind="textInput:alArea" style="width:75px;" /><br />
+                    Country: <input type="text" data-bind="textInput:alCountry" style="width:75px;" /><br />                    
+                    <button data-bind="click:alSave" style="width:75px;margin-top:5px;" class="btn btn-sm btn-primary">
+                        <i class="fas fa-save "></i> Save
+                    </button>
+                </div>
+            </div>
+        </div>
+        <ul data-bind="foreach:livedIn">
+            <li ><a data-bind="text:value, attr:{href:url}"></a> </li>
+        </ul>
+    </div>
+</div>
+    <div class="row">
+        <div class="col-md-12">
+            <div style="height:300px" id="alchemy" class="alchemy"></div>
+        </div>
+    </div>
