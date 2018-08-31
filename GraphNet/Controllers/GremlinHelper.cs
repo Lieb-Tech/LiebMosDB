@@ -14,7 +14,7 @@ namespace GraphNet.Controllers
     public class GremlinHelper
     {
         static string endpoint = "https://liebmos.documents.azure.com:443";
-        static string authKey = "1DSoCTY32l5O2Ixu5a3knwKx222b2n60gNw07vyv0WLdPfTX2Zjn4fJewxmnJn2s4FmFl3XjjgeavcxfR8RVJg==";
+        static string authKey = "REPLACE";
         static DocumentClient client = new DocumentClient(
                 new Uri(endpoint),
                 authKey,
